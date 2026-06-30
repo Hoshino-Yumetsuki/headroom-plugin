@@ -2,40 +2,39 @@
 
 from __future__ import annotations
 
-import argparse
 import json
 import sys
+import io
 
 from headroom_cli.api import compress
 
 
 def main() -> None:
-    """Main CLI entry point. Supports both stdin/stdout and file I/O."""
-    parser = argparse.ArgumentParser(description='Headroom compression CLI')
-    parser.add_argument('--input', help='Input JSON file path')
-    parser.add_argument('--output', help='Output JSON file path')
-    args = parser.parse_args()
+    """Main CLI entry point. Reads JSON from stdin, outputs JSON to stdout."""
+    # Force UTF-8 encoding for stdout/stderr on Windows
+    if hasattr(sys.stdout, 'buffer'):
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', line_buffering=True)
+    if hasattr(sys.stderr, 'buffer'):
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', line_buffering=True)
     
     try:
-        # Read input
-        if args.input:
-            with open(args.input, 'r', encoding='utf-8') as f:
-                request = json.load(f)
+        # Read from stdin with explicit binary mode to avoid Windows encoding issues
+        if hasattr(sys.stdin, 'buffer'):
+            # Binary mode available - read raw bytes
+            stdin_bytes = sys.stdin.buffer.read()
+            stdin_text = stdin_bytes.decode('utf-8')
+            request = json.loads(stdin_text)
         else:
-            # Fallback to stdin
+            # Fallback to text mode
             request = json.load(sys.stdin)
         
         # Process compression
         response = compress(request)
         
-        # Write output
-        if args.output:
-            with open(args.output, 'w', encoding='utf-8') as f:
-                json.dump(response, f, indent=2, ensure_ascii=False)
-        else:
-            # Fallback to stdout
-            json.dump(response, sys.stdout, indent=2, ensure_ascii=False)
-            sys.stdout.write("\n")
+        # Output response to stdout (now UTF-8 encoded)
+        json.dump(response, sys.stdout, indent=2, ensure_ascii=False)
+        sys.stdout.write("\n")
+        sys.stdout.flush()
         
     except json.JSONDecodeError as e:
         error_response = {
@@ -44,7 +43,9 @@ def main() -> None:
             "error_type": "JSONDecodeError",
             "details": str(e),
         }
-        _write_error(error_response, args.output)
+        json.dump(error_response, sys.stdout, indent=2)
+        sys.stdout.write("\n")
+        sys.stdout.flush()
         sys.exit(1)
         
     except Exception as e:
@@ -53,18 +54,10 @@ def main() -> None:
             "error": str(e),
             "error_type": type(e).__name__,
         }
-        _write_error(error_response, args.output)
-        sys.exit(1)
-
-
-def _write_error(error_response: dict, output_file: str | None) -> None:
-    """Write error response to file or stdout."""
-    if output_file:
-        with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(error_response, f, indent=2)
-    else:
         json.dump(error_response, sys.stdout, indent=2)
         sys.stdout.write("\n")
+        sys.stdout.flush()
+        sys.exit(1)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-import type { Plugin, PluginModule } from '@opencode-ai/plugin';
+import type { Plugin, PluginModule, Hooks } from '@opencode-ai/plugin';
 import { loadConfig } from './config.ts';
 import { createLogger } from './logger.ts';
 import { createSessionState } from './compress/index.ts';
@@ -9,7 +9,7 @@ import {
   createEventHook
 } from './hooks.ts';
 
-const server: Plugin = async (ctx) => {
+const server: Plugin = async (ctx, _options): Promise<Hooks> => {
   const config = loadConfig(ctx);
 
   if (!config.enabled) {

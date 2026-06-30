@@ -2,154 +2,344 @@
  * Message format converter: OpenCode ↔ Anthropic
  */
 
-import type { MessageWithParts } from '../types';
+import type { MessageWithParts, Logger } from '../types';
 import type { Part } from '@opencode-ai/sdk';
 
-/**
- * Anthropic message format
- */
 export interface AnthropicMessage {
-  role: 'user' | 'assistant' | 'system';
+  role: 'user' | 'assistant';
   content: string | AnthropicContentBlock[];
 }
 
-export interface AnthropicContentBlock {
-  type: 'text' | 'tool_use' | 'tool_result';
-  text?: string;
-  id?: string;
-  name?: string;
-  input?: any;
-  tool_use_id?: string;
-  content?: string;
+export type AnthropicContentBlock =
+  | AnthropicTextBlock
+  | AnthropicToolUseBlock
+  | AnthropicToolResultBlock;
+
+export interface AnthropicTextBlock {
+  type: 'text';
+  text: string;
 }
 
-/**
- * Convert OpenCode messages to Anthropic format
- */
-export function toAnthropicFormat(messages: MessageWithParts[]): AnthropicMessage[] {
-  return messages
-    .map(msg => {
-      const contentBlocks = msg.parts.map(part => partToAnthropicBlock(part)).filter(Boolean);
-      
-      if (contentBlocks.length === 0) {
-        return null;
-      }
-      
-      // Simplify if only one text block
-      if (contentBlocks.length === 1 && contentBlocks[0].type === 'text') {
-        return {
-          role: msg.role as 'user' | 'assistant',
-          content: contentBlocks[0].text!
-        };
-      }
-      
-      return {
-        role: msg.role as 'user' | 'assistant',
-        content: contentBlocks
-      };
-    })
-    .filter((msg): msg is AnthropicMessage => msg !== null);
+export interface AnthropicToolUseBlock {
+  type: 'tool_use';
+  id: string;
+  name: string;
+  input: Record<string, unknown>;
 }
 
-/**
- * Convert Anthropic messages back to OpenCode format
- */
+export interface AnthropicToolResultBlock {
+  type: 'tool_result';
+  tool_use_id: string;
+  content: string;
+  is_error?: boolean;
+}
+
+export function toAnthropicFormat(
+  messages: MessageWithParts[],
+  logger?: Logger
+): AnthropicMessage[] {
+  logger?.debug('[Converter] Converting to Anthropic format', {
+    messageCount: messages.length
+  });
+
+  const anthropicMessages: AnthropicMessage[] = [];
+  const skippedTypes = new Map<string, number>(); // Track skipped part types
+
+  for (const msg of messages) {
+    try {
+      const role = msg.info.role;
+
+      if (role !== 'user' && role !== 'assistant') {
+        continue;
+      }
+
+      const blocks: AnthropicContentBlock[] = [];
+
+      for (const part of msg.parts) {
+        const block = partToAnthropicBlock(part, skippedTypes);
+        if (block) {
+          blocks.push(block);
+        }
+      }
+
+      if (blocks.length === 0) {
+        continue;
+      }
+
+      let content: string | AnthropicContentBlock[];
+      if (blocks.length === 1 && blocks[0]?.type === 'text') {
+        const firstBlock = blocks[0] as AnthropicTextBlock;
+        content = firstBlock.text;
+      } else {
+        content = blocks;
+      }
+
+      anthropicMessages.push({ role, content });
+    } catch (err) {
+      logger?.error('[Converter] Failed to convert message', {
+        messageId: msg.info.id,
+        error: String(err)
+      });
+    }
+  }
+
+  // Log summary of skipped types
+  if (skippedTypes.size > 0) {
+    const summary = Array.from(skippedTypes.entries())
+      .map(([type, count]) => `${type}×${count}`)
+      .join(', ');
+    logger?.debug('[Converter] Skipped unsupported parts', { summary });
+  }
+
+  logger?.debug('[Converter] Conversion complete', {
+    inputMessages: messages.length,
+    outputMessages: anthropicMessages.length
+  });
+
+  return anthropicMessages;
+}
+
 export function fromAnthropicFormat(
   anthropicMessages: AnthropicMessage[],
-  originalMessages: MessageWithParts[]
+  originalMessages: MessageWithParts[],
+  logger?: Logger
 ): MessageWithParts[] {
-  // Create mapping from role+index to original message
-  const roleIndices: Map<string, number> = new Map();
-  
-  return anthropicMessages.map((anthroMsg, idx) => {
-    // Find corresponding original message
-    const roleKey = anthroMsg.role;
-    const roleIdx = roleIndices.get(roleKey) || 0;
-    roleIndices.set(roleKey, roleIdx + 1);
-    
-    const original = originalMessages.find(
-      (msg, i) => msg.role === anthroMsg.role && i >= roleIdx
-    );
-    
-    // Convert content to parts
-    const parts: Part[] = Array.isArray(anthroMsg.content)
-      ? anthroMsg.content.map((block, i) => anthropicBlockToPart(block, `part_${idx}_${i}`))
-      : [{ type: 'text', content: anthroMsg.content }];
-    
-    return {
-      role: anthroMsg.role,
-      parts,
-      // Preserve original metadata if available
-      ...(original && {
-        timestamp: original.timestamp,
-        sessionId: original.sessionId
-      })
-    };
+  logger?.debug('[Converter] Converting from Anthropic format', {
+    anthropicCount: anthropicMessages.length,
+    originalCount: originalMessages.length
   });
+
+  const result: MessageWithParts[] = [];
+
+  for (let i = 0; i < anthropicMessages.length; i++) {
+    const anthroMsg = anthropicMessages[i];
+
+    if (!anthroMsg) continue;
+
+    try {
+      const original = findMatchingOriginal(anthroMsg, i, originalMessages);
+
+      if (!original) {
+        logger?.warn('[Converter] No matching original message found', {
+          index: i,
+          role: anthroMsg.role
+        });
+        continue;
+      }
+
+      const parts = anthropicContentToParts(anthroMsg.content, original.parts, logger);
+
+      result.push({
+        info: original.info,
+        parts
+      });
+
+      logger?.debug('[Converter] Converted back to OpenCode format', {
+        messageId: original.info.id,
+        partCount: parts.length
+      });
+    } catch (err) {
+      logger?.error('[Converter] Failed to convert from Anthropic', {
+        index: i,
+        error: String(err)
+      });
+    }
+  }
+
+  logger?.debug('[Converter] Reverse conversion complete', {
+    inputCount: anthropicMessages.length,
+    outputCount: result.length
+  });
+
+  return result;
 }
 
-/**
- * Convert OpenCode Part to Anthropic content block
- */
-function partToAnthropicBlock(part: Part): AnthropicContentBlock | null {
+function partToAnthropicBlock(
+  part: Part,
+  skippedTypes: Map<string, number>
+): AnthropicContentBlock | null {
   if (part.type === 'text') {
     return {
       type: 'text',
-      text: part.content || ''
+      text: part.text || ''
     };
   }
-  
-  // Tool use (has input_data)
-  if (part.type === 'tool_call' || (part.type === 'tool' && (part as any).input_data)) {
+
+  if (part.type === 'tool') {
     const toolPart = part as any;
-    return {
-      type: 'tool_use',
-      id: toolPart.id || 'tool_unknown',
-      name: toolPart.tool_name || toolPart.tool || 'unknown',
-      input: toolPart.input_data || {}
-    };
+    const state = toolPart.state;
+
+    if (state.status === 'pending' || state.status === 'running') {
+      return {
+        type: 'tool_use',
+        id: toolPart.callID,
+        name: toolPart.tool,
+        input: state.input || {}
+      };
+    }
+
+    if (state.status === 'completed' || state.status === 'error') {
+      return {
+        type: 'tool_result',
+        tool_use_id: toolPart.callID,
+        content: state.output || state.error || '',
+        is_error: state.status === 'error'
+      };
+    }
   }
-  
-  // Tool result (has output_data)
-  if (part.type === 'tool_result' || (part.type === 'tool' && (part as any).output_data)) {
-    const resultPart = part as any;
-    return {
-      type: 'tool_result',
-      tool_use_id: resultPart.tool_use_id || resultPart.id || 'tool_unknown',
-      content: resultPart.output_data || resultPart.content || ''
-    };
-  }
-  
+
+  // Track skipped types for summary
+  const count = skippedTypes.get(part.type) || 0;
+  skippedTypes.set(part.type, count + 1);
+
   return null;
 }
 
-/**
- * Convert Anthropic content block to OpenCode Part
- */
-function anthropicBlockToPart(block: AnthropicContentBlock, fallbackId: string): Part {
-  if (block.type === 'text') {
-    return {
-      type: 'text',
-      content: block.text || ''
-    };
+function findMatchingOriginal(
+  anthroMsg: AnthropicMessage,
+  index: number,
+  originals: MessageWithParts[]
+): MessageWithParts | null {
+  const candidate = originals[index];
+  if (candidate && candidate.info.role === anthroMsg.role) {
+    return candidate;
   }
-  
-  if (block.type === 'tool_use') {
-    return {
-      type: 'tool_call',
-      tool_name: block.name || 'unknown',
-      input_data: block.input || {},
-      id: block.id || fallbackId
-    } as any;
+
+  const roleMatches = originals.filter((m) => m.info.role === anthroMsg.role);
+  if (roleMatches.length > 0) {
+    return roleMatches[Math.min(index, roleMatches.length - 1)] || null;
   }
-  
-  if (block.type === 'tool_result') {
-    return {
-      type: 'tool_result',
-      output_data: block.content || '',
-      tool_use_id: block.tool_use_id || fallbackId
-    } as any;
+
+  return null;
+}
+
+function anthropicContentToParts(
+  content: string | AnthropicContentBlock[],
+  originalParts: Part[],
+  logger?: Logger
+): Part[] {
+  if (typeof content === 'string') {
+    const originalTextPart = originalParts.find((p) => p.type === 'text');
+
+    if (originalTextPart && originalTextPart.type === 'text') {
+      return [
+        {
+          ...originalTextPart,
+          text: content
+        }
+      ];
+    }
+
+    return [
+      {
+        id: 'text_0',
+        sessionID: originalParts[0]?.sessionID || '',
+        messageID: originalParts[0]?.messageID || '',
+        type: 'text',
+        text: content
+      } as Part
+    ];
   }
-  
-  return { type: 'text', content: '' };
+
+  const parts: Part[] = [];
+
+  for (let i = 0; i < content.length; i++) {
+    const block = content[i];
+
+    if (!block) continue;
+
+    try {
+      if (block.type === 'text') {
+        const textBlock = block as AnthropicTextBlock;
+        const originalTextPart = originalParts.find((p) => p.type === 'text');
+
+        if (originalTextPart && originalTextPart.type === 'text') {
+          parts.push({
+            ...originalTextPart,
+            text: textBlock.text
+          });
+        } else {
+          parts.push({
+            id: `text_${i}`,
+            sessionID: originalParts[0]?.sessionID || '',
+            messageID: originalParts[0]?.messageID || '',
+            type: 'text',
+            text: textBlock.text
+          } as Part);
+        }
+      } else if (block.type === 'tool_use') {
+        const toolUseBlock = block as AnthropicToolUseBlock;
+        const originalToolPart = originalParts.find(
+          (p) => p.type === 'tool' && (p as any).callID === toolUseBlock.id
+        );
+
+        if (originalToolPart && originalToolPart.type === 'tool') {
+          parts.push(originalToolPart);
+        } else {
+          parts.push({
+            id: `tool_${i}`,
+            sessionID: originalParts[0]?.sessionID || '',
+            messageID: originalParts[0]?.messageID || '',
+            type: 'tool',
+            callID: toolUseBlock.id,
+            tool: toolUseBlock.name,
+            state: {
+              status: 'pending',
+              input: toolUseBlock.input,
+              raw: JSON.stringify(toolUseBlock.input)
+            }
+          } as Part);
+        }
+      } else if (block.type === 'tool_result') {
+        const toolResultBlock = block as AnthropicToolResultBlock;
+        const originalToolPart = originalParts.find(
+          (p) => p.type === 'tool' && (p as any).callID === toolResultBlock.tool_use_id
+        );
+
+        if (originalToolPart && originalToolPart.type === 'tool') {
+          const toolPart = originalToolPart as any;
+          parts.push({
+            ...toolPart,
+            state: {
+              ...toolPart.state,
+              status: toolResultBlock.is_error ? 'error' : 'completed',
+              [toolResultBlock.is_error ? 'error' : 'output']: toolResultBlock.content
+            }
+          } as Part);
+        } else {
+          parts.push({
+            id: `tool_result_${i}`,
+            sessionID: originalParts[0]?.sessionID || '',
+            messageID: originalParts[0]?.messageID || '',
+            type: 'tool',
+            callID: toolResultBlock.tool_use_id,
+            tool: 'unknown',
+            state: toolResultBlock.is_error
+              ? {
+                  status: 'error',
+                  input: {},
+                  error: toolResultBlock.content,
+                  time: { start: Date.now(), end: Date.now() }
+                }
+              : {
+                  status: 'completed',
+                  input: {},
+                  output: toolResultBlock.content,
+                  title: '',
+                  metadata: {},
+                  time: { start: Date.now(), end: Date.now() }
+                }
+          } as Part);
+        }
+      }
+    } catch (err) {
+      logger?.error('[Converter] Failed to convert block', {
+        blockIndex: i,
+        blockType: block.type,
+        error: String(err)
+      });
+    }
+  }
+
+  return parts;
 }
