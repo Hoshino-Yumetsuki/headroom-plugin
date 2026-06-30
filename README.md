@@ -1,6 +1,16 @@
-# Headroom Plugin
+# @q78kg/opencode-headroom
 
-Real-time context pruning for OpenCode sessions — inspired by [cozempic](https://github.com/Ruya-AI/cozempic) and powered by headroom compression algorithms.
+Real-time context pruning for OpenCode sessions — inspired by [cozempic](https://github.com/Ruya-AI/cozempic) and aligned with [headroom](https://github.com/headroomlabs-ai/headroom) reverse proxy behavior.
+
+## Design Principles
+
+This plugin follows the **transparency principle** of the headroom reverse proxy:
+
+- **No metadata injection**: The plugin does not inject any visible content into messages sent to the LLM
+- **Internal tracking only**: Message IDs and compression metadata are tracked internally
+- **Non-invasive pruning**: Context cleanup happens transparently without modifying user or model messages
+- **JSON structured logging**: Machine-readable logs with local timezone timestamps
+- **External log rotation**: Date-based log files (YYYY-MM-DD.log) rely on external tools like logrotate
 
 ## Architecture
 
@@ -63,6 +73,11 @@ Global config at `~/.config/opencode/headroom.jsonc`:
   "cli": {
     "path": "headroom-plugin-cli",
     "prescription": "gentle"
+  },
+  "log": {
+    "debug": false,
+    "info": true,
+    "path": "~/.config/opencode/logs/headroom"
   }
 }
 ```

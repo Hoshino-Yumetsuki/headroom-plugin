@@ -1,8 +1,10 @@
 import type { SessionState } from '../types.ts';
+import { randomUUID } from 'node:crypto';
 
 export function createSessionState(): SessionState {
   return {
     sessionId: null,
+    requestId: randomUUID(),  // Generate UUID v4 for request tracking
     compressionBlocks: [],
     prunedPartIds: new Set(),
     messageIdMap: new Map(),
@@ -20,6 +22,7 @@ export function createSessionState(): SessionState {
 
 export function resetSessionState(state: SessionState): void {
   state.sessionId = null;
+  state.requestId = randomUUID();  // Generate new request ID on reset
   state.compressionBlocks = [];
   state.prunedPartIds.clear();
   state.messageIdMap.clear();

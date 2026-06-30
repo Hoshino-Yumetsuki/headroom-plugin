@@ -36,6 +36,7 @@ export interface HeadroomConfig {
 
 export interface SessionState {
   sessionId: string | null;
+  requestId: string | null;  // UUID v4 for request lifecycle tracking
   compressionBlocks: CompressionBlock[];
   prunedPartIds: Set<string>;
   messageIdMap: Map<string, string>;
@@ -100,10 +101,10 @@ export interface PriorityMap {
 }
 
 export interface Logger {
-  debug(msg: string): void;
-  info(msg: string): void;
-  warn(msg: string): void;
-  error(msg: string): void;
+  debug(msg: string, metadata?: Record<string, unknown>): void;
+  info(msg: string, metadata?: Record<string, unknown>): void;
+  warn(msg: string, metadata?: Record<string, unknown>): void;
+  error(msg: string, metadata?: Record<string, unknown>): void;
 }
 
 export type PruningStrategy = (

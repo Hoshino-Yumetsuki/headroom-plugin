@@ -19,7 +19,7 @@ const server: Plugin = async (ctx) => {
   const state = createSessionState();
   const logger = createLogger(config);
 
-  logger.info('Headroom plugin initialized');
+  logger.info('Headroom plugin initialized', { requestId: state.requestId });
 
   return {
     'experimental.chat.system.transform': createSystemPromptHook(config, state),
