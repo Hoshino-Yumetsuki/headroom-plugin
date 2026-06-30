@@ -1,6 +1,6 @@
 {
   "name": "@q78kg/opencode-headroom",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Real-time context pruning plugin for OpenCode — powered by headroom",
   "type": "module",
   "main": "lib/index.mjs",
