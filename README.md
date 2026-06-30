@@ -21,13 +21,7 @@ The OpenCode plugin implementation.
 Using the OpenCode CLI:
 
 ```bash
-opencode plugin add git+https://github.com/Hoshino-Yumetsuki/headroom-plugin.git#workspace=@q78kg/opencode-headroom
-```
-
-If you are developing locally:
-
-```bash
-opencode plugin add ./packages/opencode-plugin
+opencode plugin add @q78kg/opencode-headroom
 ```
 
 ### Installing the Python CLI (`headroom-plugin-cli`)
@@ -35,13 +29,13 @@ opencode plugin add ./packages/opencode-plugin
 Using `uv` (recommended):
 
 ```bash
-uv pip install headroom-plugin-cli@git+https://github.com/Hoshino-Yumetsuki/headroom-plugin.git#subdirectory=packages/headroom-plugin-cli
+uv tool install headroom-plugin-cli@git+https://github.com/Hoshino-Yumetsuki/headroom-plugin.git#subdirectory=packages/headroom-plugin-cli --upgrade
 ```
 
 Using standard `pip`:
 
 ```bash
-pip install headroom-plugin-cli@git+https://github.com/Hoshino-Yumetsuki/headroom-plugin.git#subdirectory=packages/headroom-plugin-cli
+pip install headroom-plugin-cli@git+https://github.com/Hoshino-Yumetsuki/headroom-plugin.git#subdirectory=packages/headroom-plugin-cli --upgrade
 ```
 
 ## Configuration
