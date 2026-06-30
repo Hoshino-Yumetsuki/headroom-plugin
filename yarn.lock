@@ -669,6 +669,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@root/headroom-plugins@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "@root/headroom-plugins@workspace:."
+  dependencies:
+    oxfmt: "npm:^0.56.0"
+    oxlint: "npm:^1.71.0"
+    oxlint-tsgolint: "npm:^0.23.0"
+    typescript: "npm:^6.0.3"
+  languageName: unknown
+  linkType: soft
+
 "@standard-schema/spec@npm:^1.1.0":
   version: 1.1.0
   resolution: "@standard-schema/spec@npm:1.1.0"
@@ -881,17 +892,6 @@ __metadata:
   checksum: 10c0/386d011a553e02bc594ac2ca0bd6d9e4c22d7fa8cfbfc448a6d148c59ea881b092db9dbe3547ae4b88e55f1b01f7c4a2ecc53b310c042793e63aa44cf6c257f2
   languageName: node
   linkType: hard
-
-"headroom-plugin@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "headroom-plugin@workspace:."
-  dependencies:
-    oxfmt: "npm:^0.56.0"
-    oxlint: "npm:^1.71.0"
-    oxlint-tsgolint: "npm:^0.23.0"
-    typescript: "npm:^6.0.3"
-  languageName: unknown
-  linkType: soft
 
 "ini@npm:^7.0.0":
   version: 7.0.0

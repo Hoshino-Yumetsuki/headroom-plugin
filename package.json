@@ -1,5 +1,5 @@
 {
-  "name": "@q78kg/opencode-headroom",
+  "name": "@root/headroom-plugins",
   "private": true,
   "type": "module",
   "workspaces": [
