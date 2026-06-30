@@ -28,7 +28,7 @@ The plugin classifies messages into priority tiers:
 ## Installation
 
 ```bash
-yarn add @headroom-plugin/opencode-plugin
+yarn add @q78kg/opencode-headroom
 ```
 
 ## Configuration
