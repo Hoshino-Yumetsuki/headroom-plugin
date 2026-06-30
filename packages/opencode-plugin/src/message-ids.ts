@@ -1,4 +1,5 @@
 import type { MessageWithParts } from './types.ts';
+import type { Part } from '@opencode-ai/sdk';
 
 export function assignMessageIds(messages: readonly MessageWithParts[]): Map<string, string> {
   const map = new Map<string, string>();
@@ -19,14 +20,31 @@ export function injectMessageIdTags(
     const shortId = idMap.get(msg.info.id);
     if (!shortId) continue;
 
-    const firstTextPartIndex = msg.parts.findIndex((p) => p.type === 'text');
-    if (firstTextPartIndex === -1) continue;
+    // Create a fake ToolPart that will render as [headroom] m0001 in the UI
+    const fakeToolPart: Part = {
+      id: `headroom-${shortId}`,
+      sessionID: msg.info.sessionID,
+      messageID: msg.info.id,
+      type: 'tool',
+      callID: `headroom-${shortId}`,
+      tool: 'headroom',
+      state: {
+        status: 'completed',
+        input: {},
+        output: shortId,
+        time: {
+          start: Date.now(),
+          end: Date.now()
+        }
+      },
+      metadata: {
+        headroomId: shortId,
+        silent: true
+      }
+    };
 
-    const firstTextPart = msg.parts[firstTextPartIndex];
-    if (firstTextPart?.type !== 'text') continue;
-
-    const tag = `<!-- headroom-id: ${shortId} -->\n\n`;
-    firstTextPart.text = tag + firstTextPart.text;
+    // Insert the fake tool part at the beginning
+    msg.parts.unshift(fakeToolPart as any);
   }
 }
 
@@ -34,10 +52,12 @@ export function stripModelGeneratedMetadata(messages: MessageWithParts[]): void 
   for (const msg of messages) {
     if (msg.info.role !== 'assistant') continue;
 
-    for (const part of msg.parts) {
-      if (part.type !== 'text') continue;
-
-      part.text = part.text.replace(/<!-- headroom-id: .*? -->\s*/g, '');
-    }
+    // Remove any fake headroom tool parts that the model might have generated
+    msg.parts = msg.parts.filter(part => {
+      if (part.type === 'tool' && part.tool === 'headroom') {
+        return false;
+      }
+      return true;
+    });
   }
 }
