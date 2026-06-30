@@ -18,15 +18,15 @@ This monorepo contains two packages:
 
 ### 1. `headroom-plugin-cli` (Python)
 
-Backend CLI tool for OpenCode session pruning. Uses stdlib-only (zero dependencies) for maximum portability.
+Generic context compression backend - client-agnostic, communicates via JSON stdin/stdout.
 
 ### 2. `opencode-plugin` (TypeScript)
 
-The OpenCode plugin implementation.
+OpenCode plugin that bridges the hook system to the Python backend via JSON pipes.
 
-## Installation Guide
+## Installation
 
-### Installing the Python CLI (`headroom-plugin-cli`)
+### Python CLI
 
 Using `uv` (recommended):
 
@@ -34,23 +34,19 @@ Using `uv` (recommended):
 uv tool install headroom-plugin-cli@git+https://github.com/Hoshino-Yumetsuki/headroom-plugin.git#subdirectory=packages/headroom-plugin-cli --upgrade
 ```
 
-Using standard `pip`:
+Using `pip`:
 
 ```bash
 pip install headroom-plugin-cli@git+https://github.com/Hoshino-Yumetsuki/headroom-plugin.git#subdirectory=packages/headroom-plugin-cli --upgrade
 ```
 
-### Installing the OpenCode Plugin
-
-Using the OpenCode CLI:
+### OpenCode Plugin
 
 ```bash
 opencode plugin add @q78kg/opencode-headroom
 ```
 
-## Configuration (Optional)
-
-### OpenCode
+## Configuration
 
 Global config at `~/.config/opencode/headroom.jsonc`:
 
@@ -62,7 +58,7 @@ Global config at `~/.config/opencode/headroom.jsonc`:
     "maxContextLimit": 100000,
     "minContextLimit": 50000,
     "nudgeFrequency": 5,
-    "protectedTools": ["task", "skill", "todowrite", "todoread"],
+    "protectedTools": ["task", "skill", "todowrite"],
     "protectUserMessages": false
   },
   "strategies": {
@@ -82,43 +78,15 @@ Global config at `~/.config/opencode/headroom.jsonc`:
 }
 ```
 
-Project config at `.opencode/headroom.jsonc` (overrides global).
+Project config at `.opencode/headroom.jsonc` overrides global settings.
 
 ## How It Works
 
-1. **OpenCode Plugin** hooks into message transforms before sending to LLM
-2. **Message Pipeline**: Filter → Assign IDs → Run strategies → Apply compression → Prune parts → Inject nudges
-3. **Strategies** prune duplicate tool calls, old errors, stale file reads
-4. **Compress Tool** allows model to summarize message ranges into compact blocks
-5. **Nudge System** guides model toward compression at appropriate intervals
-6. **Python CLI** can operate on session files directly (offline pruning)
-
-## Pruning Strategies
-
-### Gentle Tier (5 strategies)
-
-- `compaction-collapse` - Collapse compaction markers
-- `stale-file` - Remove superseded file reads
-- `base64-strip` - Strip large base64 data
-- `empty-output` - Remove empty tool outputs
-- `step-metadata` - Trim step metadata
-
-### Standard Tier (11 strategies, includes gentle)
-
-- `dedup` - Deduplicate identical tool calls
-- `error-purge` - Purge error inputs after N turns
-- `reasoning-trim` - Trim extended thinking blocks
-- `snapshot` - Remove old git snapshots
-- `retry` - Remove retry metadata
-- `patch` - Compress patch data
-
-### Aggressive Tier (16 strategies, includes standard)
-
-- `old-context-drop` - Drop oldest context
-- `large-truncate` - Truncate oversized outputs
-- `subtask-collapse` - Collapse subtask data
-- `file-summarize` - Summarize file parts
-- `thinning` - Aggressive message thinning
+1. OpenCode plugin hooks into message transform
+2. Converts messages to generic JSON format
+3. Calls Python CLI via stdin/stdout
+4. Applies compression actions returned from CLI
+5. Logs all operations with structured JSON
 
 ## License
 
