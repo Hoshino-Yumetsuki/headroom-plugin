@@ -14,15 +14,25 @@ This plugin follows the **transparency principle** of the headroom reverse proxy
 
 ## Architecture
 
-This monorepo contains two packages:
+This plugin uses **headroom SDK** for intelligent context compression. The architecture is clean and simple:
 
 ### 1. `headroom-plugin-cli` (Python)
 
-Generic context compression backend - client-agnostic, communicates via JSON stdin/stdout.
+**Generic compression backend** - client-agnostic, powered by [headroom SDK](https://headroomlabs-ai.github.io/headroom/).
+
+- **Input**: Anthropic/OpenAI format messages (JSON via stdin)
+- **Output**: Compressed messages with metrics (JSON via stdout)  
+- **Compression**: Delegated to headroom SDK's battle-tested algorithms
+- **No strategy code**: All compression logic lives in headroom
 
 ### 2. `opencode-plugin` (TypeScript)
 
-OpenCode plugin that bridges the hook system to the Python backend via JSON pipes.
+**OpenCode adapter** - converts OpenCode's internal format to/from Anthropic format.
+
+- Converts `MessageWithParts` → Anthropic messages
+- Calls Python CLI
+- Converts compressed messages back to `MessageWithParts`
+- Zero compression logic - pure format translation
 
 ## Installation
 

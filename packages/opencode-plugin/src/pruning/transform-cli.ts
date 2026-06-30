@@ -1,3 +1,7 @@
+/**
+ * CLI-based compression transform using headroom SDK
+ */
+
 import type {
   MessageWithParts,
   HeadroomConfig,
@@ -5,13 +9,27 @@ import type {
   Logger,
 } from '../types.ts';
 import { resetSessionState } from '../compress/state.ts';
-import {
-  assignMessageIds,
-  injectMessageIdTags,
-  stripModelGeneratedMetadata
-} from '../message-ids.ts';
-import { callPythonCLI, messagesToJSON, type CompressRequest } from '../cli-bridge.ts';
-import { injectCompressionNudges } from '../nudge/inject.ts';
+import { stripModelGeneratedMetadata } from '../message-ids.ts';
+import { toAnthropicFormat, fromAnthropicFormat } from './message-converter.ts';
+import { spawn } from 'child_process';
+
+interface CLIRequest {
+  messages: any[];
+  prescription: string;
+  model?: string;
+  context_window?: number;
+}
+
+interface CLIResponse {
+  status: 'success' | 'error';
+  messages?: any[];
+  tokens_before?: number;
+  tokens_after?: number;
+  tokens_saved?: number;
+  compression_ratio?: number;
+  error?: string;
+  error_type?: string;
+}
 
 function filterMalformedMessages(messages: MessageWithParts[]): MessageWithParts[] {
   return messages.filter((msg) => {
@@ -47,124 +65,132 @@ function checkSessionChange(
 }
 
 /**
- * Apply compression actions returned from Python CLI.
+ * Call Python CLI with JSON request/response
  */
-function applyCompressionActions(
-  messages: MessageWithParts[],
-  actions: CompressRequest['messages'],
-  state: SessionState,
+async function callCLI(
+  cliPath: string,
+  request: CLIRequest,
   logger: Logger
-): number {
-  let bytesSaved = 0;
+): Promise<CLIResponse> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn(cliPath, [], {
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
 
-  for (const action of actions) {
-    if (action.action === 'delete_part') {
-      // Find and mark part for deletion
-      for (const msg of messages) {
-        const partIndex = msg.parts.findIndex(p => p.id === action.part_id);
-        if (partIndex !== -1) {
-          const part = msg.parts[partIndex];
-          state.prunedPartIds.add(action.part_id);
-          bytesSaved += action.savings_bytes || 0;
-          
-          logger.debug('Pruning part', {
-            partId: action.part_id,
-            reason: action.reason,
-            strategy: action.strategy,
-            savings: action.savings_bytes
-          });
-          
-          // Remove the part
-          msg.parts.splice(partIndex, 1);
-          break;
-        }
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+
+    proc.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    proc.on('close', (code) => {
+      if (code !== 0) {
+        logger.error('CLI process failed', { code, stderr });
+        reject(new Error(`CLI exited with code ${code}: ${stderr}`));
+        return;
       }
-    }
-  }
 
-  return bytesSaved;
+      try {
+        const response = JSON.parse(stdout);
+        resolve(response);
+      } catch (e) {
+        logger.error('Failed to parse CLI response', { stdout, error: String(e) });
+        reject(new Error(`Invalid JSON from CLI: ${e}`));
+      }
+    });
+
+    proc.on('error', (err) => {
+      logger.error('Failed to spawn CLI', { error: String(err) });
+      reject(err);
+    });
+
+    // Send request
+    proc.stdin.write(JSON.stringify(request));
+    proc.stdin.end();
+  });
 }
 
+/**
+ * Main compression transform using CLI
+ */
+export async function transform(
+  output: { messages: MessageWithParts[] },
+  config: HeadroomConfig,
+  state: SessionState,
+  logger: Logger
+): Promise<void> {
+  logger.debug('CLI transform start', { messageCount: output.messages.length });
+
+  // Filter and validate
+  output.messages = filterMalformedMessages(output.messages);
+  checkSessionChange(output.messages, state, logger);
+  stripModelGeneratedMetadata(output.messages);
+
+  // Convert to Anthropic format
+  const anthropicMessages = toAnthropicFormat(output.messages);
+  
+  logger.debug('Converted to Anthropic format', {
+    originalCount: output.messages.length,
+    anthropicCount: anthropicMessages.length
+  });
+
+  // Call Python CLI
+  try {
+    const request: CLIRequest = {
+      messages: anthropicMessages,
+      prescription: config.cli.prescription,
+      model: 'claude-sonnet-4-5-20250929',
+      context_window: 200000
+    };
+
+    logger.debug('Calling Python CLI', { prescription: request.prescription });
+
+    const response = await callCLI(config.cli.path, request, logger);
+
+    if (response.status === 'success' && response.messages) {
+      // Convert back to OpenCode format
+      const compressedMessages = fromAnthropicFormat(response.messages, output.messages);
+      
+      const bytesSaved = response.tokens_saved || 0;
+      state.totalBytesSaved += bytesSaved;
+
+      logger.info('Compression applied', {
+        tokensRemoved: bytesSaved,
+        compressionRatio: response.compression_ratio,
+        messagesBefore: output.messages.length,
+        messagesAfter: compressedMessages.length
+      });
+
+      // Replace messages with compressed version
+      output.messages = compressedMessages;
+    } else if (response.status === 'error') {
+      logger.error('CLI returned error', {
+        error: response.error,
+        errorType: response.error_type
+      });
+    }
+  } catch (err) {
+    logger.error('Failed to call CLI', { error: String(err) });
+    // Continue without compression rather than failing
+  }
+
+  logger.debug('CLI transform complete');
+}
+
+/**
+ * Create message transform pipeline (for compatibility with hooks.ts)
+ */
 export function createMessageTransformPipeline(
   config: HeadroomConfig,
   state: SessionState,
   logger: Logger
 ) {
-  return async (input: unknown, output: { messages: MessageWithParts[] }) => {
-    output.messages = filterMalformedMessages(output.messages);
-
-    checkSessionChange(output.messages, state, logger);
-
-    stripModelGeneratedMetadata(output.messages);
-
-    const idMap = assignMessageIds(output.messages);
-    state.messageIdMap = idMap;
-    state.shortIdMap = new Map(Array.from(idMap.entries()).map(([k, v]) => [v, k]));
-
-    // Call Python CLI for compression recommendations
-    try {
-      const request: CompressRequest = {
-        command: 'compress',
-        prescription: config.cli.prescription,
-        session: {
-          id: state.sessionId || 'unknown',
-          context_window: 200000, // Could be made configurable
-          current_usage: 0 // Could calculate from message sizes
-        },
-        messages: messagesToJSON(output.messages, state.sessionId || 'unknown')
-      };
-
-      logger.debug('Calling Python CLI', {
-        prescription: request.prescription,
-        messageCount: request.messages.length
-      });
-
-      const response = await callPythonCLI(config.cli.path, request, logger);
-
-      if (response.status === 'success' && response.actions) {
-        const bytesSaved = applyCompressionActions(
-          output.messages,
-          response.actions as any,
-          state,
-          logger
-        );
-
-        state.totalBytesSaved += bytesSaved;
-
-        logger.info('Compression applied', {
-          actions: response.actions.length,
-          bytesSaved,
-          savingsPercent: response.summary?.savings_percent
-        });
-      } else if (response.status === 'error') {
-        logger.error('Python CLI returned error', {
-          error: response.error,
-          details: response.details
-        });
-      }
-    } catch (err) {
-      logger.error('Failed to call Python CLI', { error: String(err) });
-      // Continue without compression rather than failing the whole request
-    }
-
-    // Inject compression nudges if needed
-    const priorityMap = { low: [], medium: [], high: [] };
-    injectCompressionNudges(output.messages, config, state, logger, priorityMap);
-
-    injectMessageIdTags(output.messages, idMap);
-
-    state.turnCount++;
-    state.fetchCount++;
-
-    const lastMessage = output.messages[output.messages.length - 1];
-    if (lastMessage?.info.role === 'user') {
-      state.lastUserMessageTurn = state.turnCount;
-    }
-
-    logger.debug('Message transform complete', {
-      messageCount: output.messages.length,
-      turn: state.turnCount,
-      requestId: state.requestId
-    });
+  return async (output: { messages: MessageWithParts[] }) => {
+    await transform(output, config, state, logger);
   };
 }

@@ -69,31 +69,6 @@ export interface ToolCacheEntry {
   turnIndex: number;
 }
 
-export interface DiagnoseResult {
-  sessionId: string;
-  totalBytes: number;
-  totalParts: number;
-  estimatedTokens: number;
-  breakdown: Record<string, { bytes: number; count: number; pct: number }>;
-  recommendations: readonly string[];
-}
-
-export interface TreatResult {
-  sessionId: string;
-  prescription: string;
-  executed: boolean;
-  bytesSaved: number;
-  messagesPruned: number;
-}
-
-export interface StrategyRunResult {
-  strategy: string;
-  sessionId: string;
-  executed: boolean;
-  changes: number;
-  bytesSaved: number;
-}
-
 export interface PriorityMap {
   low: string[];
   medium: string[];

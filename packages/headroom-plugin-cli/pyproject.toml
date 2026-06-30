@@ -8,6 +8,9 @@ version = "1.0.0"
 description = "Context pruning CLI for OpenCode sessions"
 requires-python = ">=3.10"
 license = "MIT"
+dependencies = [
+    "headroom-ai[all]>=0.28.0",
+]
 
 [project.scripts]
 headroom-plugin-cli = "headroom_cli.cli:main"

@@ -16,10 +16,10 @@ export interface CompressRequest {
     parts: Array<{
       id: string;
       type: string;
-      content?: string;
-      tool?: string;
-      input?: unknown;
-      output?: string;
+      content?: string | undefined;
+      tool?: string | undefined;
+      input?: unknown | undefined;
+      output?: string | undefined;
       size_bytes: number;
     }>;
   }>;
@@ -70,9 +70,10 @@ export async function callPythonCLI(
     cli.on('close', (code) => {
       if (code !== 0) {
         logger.error(`Python CLI exited with code ${code}`, {
+          stdout: stdout.trim().slice(0, 500),
           stderr: stderr.trim()
         });
-        reject(new Error(`CLI exited with code ${code}: ${stderr}`));
+        reject(new Error(`CLI exited with code ${code}: stdout=${stdout.slice(0, 200)} stderr=${stderr}`));
         return;
       }
 
@@ -95,7 +96,14 @@ export async function callPythonCLI(
 
     // Write request JSON to stdin
     try {
-      cli.stdin.write(JSON.stringify(request));
+      const requestJSON = JSON.stringify(request);
+      logger.debug('Sending to Python CLI', {
+        requestSize: requestJSON.length,
+        messageCount: request.messages.length,
+        firstMessageId: request.messages[0]?.id,
+        requestPreview: requestJSON.slice(0, 200)
+      });
+      cli.stdin.write(requestJSON);
       cli.stdin.end();
     } catch (err) {
       logger.error('Failed to write to Python CLI stdin', { error: String(err) });
