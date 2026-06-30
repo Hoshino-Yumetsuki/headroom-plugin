@@ -11,7 +11,7 @@ import type {
 import { resetSessionState } from '../compress/state.ts';
 import { stripModelGeneratedMetadata } from '../message-ids.ts';
 import { toAnthropicFormat, fromAnthropicFormat } from './message-converter.ts';
-import { spawn } from 'child_process';
+import { spawn } from 'node:child_process';
 
 interface CLIRequest {
   messages: any[];
@@ -55,9 +55,9 @@ function checkSessionChange(
     state.sessionId = sessionIdHint ?? null;
     logger.info('Session initialized', { sessionId: state.sessionId });
   } else if (state.sessionId !== sessionIdHint) {
-    logger.info('Session changed', { 
-      oldSession: state.sessionId, 
-      newSession: sessionIdHint 
+    logger.info('Session changed', {
+      oldSession: state.sessionId,
+      newSession: sessionIdHint
     });
     resetSessionState(state);
     state.sessionId = sessionIdHint ?? null;
@@ -133,7 +133,7 @@ export async function transform(
 
   // Convert to Anthropic format
   const anthropicMessages = toAnthropicFormat(output.messages);
-  
+
   logger.debug('Converted to Anthropic format', {
     originalCount: output.messages.length,
     anthropicCount: anthropicMessages.length
@@ -155,7 +155,7 @@ export async function transform(
     if (response.status === 'success' && response.messages) {
       // Convert back to OpenCode format
       const compressedMessages = fromAnthropicFormat(response.messages, output.messages);
-      
+
       const bytesSaved = response.tokens_saved || 0;
       state.totalBytesSaved += bytesSaved;
 
