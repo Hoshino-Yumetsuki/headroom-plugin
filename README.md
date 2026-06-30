@@ -6,7 +6,7 @@ Real-time context pruning for OpenCode sessions — inspired by [cozempic](https
 
 This monorepo contains two packages:
 
-### 1. `headroom-cli` (Python)
+### 1. `headroom-plugin-cli` (Python)
 
 Backend CLI tool for OpenCode session pruning. Uses stdlib-only (zero dependencies) for maximum portability.
 
@@ -21,45 +21,41 @@ Backend CLI tool for OpenCode session pruning. Uses stdlib-only (zero dependenci
 **Commands:**
 
 ```bash
-headroom-cli list                    # List all sessions
-headroom-cli diagnose <session>      # Analyze bloat sources
-headroom-cli treat <session> -rx gentle --execute  # Apply gentle pruning
-headroom-cli strategy <name> <session> --execute   # Run single strategy
-headroom-cli guard --daemon -rx standard           # Background monitoring
-headroom-cli doctor                  # Health check
-headroom-cli formulary               # Show all strategies
+headroom-plugin-cli list                    # List all sessions
+headroom-plugin-cli diagnose <session>      # Analyze bloat sources
+headroom-plugin-cli treat <session> -rx gentle --execute  # Apply gentle pruning
+headroom-plugin-cli strategy <name> <session> --execute   # Run single strategy
+headroom-plugin-cli guard --daemon -rx standard           # Background monitoring
+headroom-plugin-cli doctor                  # Health check
+headroom-plugin-cli formulary               # Show all strategies
 ```
 
-**Installation:**
+### Installation Guide
 
+#### Installing the Python CLI (`headroom-plugin-cli`)
+To install the Python package directly from a git repository URL (e.g., GitHub), you can use `pip` or `uv`. The format is `package_name@git+url`.
+
+Using `uv` (recommended):
 ```bash
-cd packages/headroom-cli
-uv pip install -e .
+uv pip install headroom-plugin-cli@git+https://github.com/your-org/headroom-plugin.git#subdirectory=packages/headroom-plugin-cli
 ```
 
-### 2. `opencode-plugin` (TypeScript)
+Using standard `pip`:
+```bash
+pip install headroom-plugin-cli@git+https://github.com/your-org/headroom-plugin.git#subdirectory=packages/headroom-plugin-cli
+```
+*(Note: Because this is a monorepo, you must specify the `#subdirectory=` fragment to point to the Python package folder.)*
 
-Real-time OpenCode plugin that hooks into message transforms and provides:
+#### Installing the OpenCode Plugin (`opencode-plugin`)
+To install the OpenCode plugin (npm package) directly from a git repository URL:
 
-**Features:**
+Using the OpenCode CLI:
+```bash
+opencode plugin add git+https://github.com/your-org/headroom-plugin.git#workspace=opencode-headroom
+```
+*(Note: Replace `your-org/headroom-plugin` with the actual repository URL. The `#workspace=` fragment is required for monorepos to specify which package to install from the repo).*
 
-- In-flight message pruning (deduplication, error purge, stale context removal)
-- Range-based compress tool for model-invoked compression
-- Nudge system to guide model toward compression
-- Three-layer config system (global → configDir → project)
-- Compression block state management
-- Bridge to Python CLI for heavy compression work
-
-**Hooks:**
-
-- `experimental.chat.messages.transform` - Core pruning pipeline
-- `experimental.chat.system.transform` - System prompt augmentation
-- `command.execute.before` - Slash commands (`/headroom`, `/headroom-compress`)
-- `tool` - Compress tool registration
-- `config` - Permission and command registration
-
-**Installation:**
-
+If you are developing locally:
 ```bash
 opencode plugin add ./packages/opencode-plugin
 ```
@@ -85,7 +81,7 @@ Global config at `~/.config/opencode/headroom.jsonc`:
     "staleContext": { "enabled": true }
   },
   "cli": {
-    "path": "headroom-cli",
+    "path": "headroom-plugin-cli",
     "prescription": "gentle"
   }
 }
@@ -124,7 +120,7 @@ yarn format
 ```
 headroom-plugin/
 ├── packages/
-│   ├── headroom-cli/          # Python CLI backend
+│   ├── headroom-plugin-cli/          # Python CLI backend
 │   │   ├── pyproject.toml
 │   │   └── src/headroom_cli/
 │   │       ├── cli.py         # argparse entry point

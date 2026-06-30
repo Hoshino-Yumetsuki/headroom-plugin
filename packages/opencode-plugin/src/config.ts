@@ -22,7 +22,7 @@ const DEFAULT_CONFIG: HeadroomConfig = {
     staleContext: { enabled: true }
   },
   cli: {
-    path: 'headroom-cli',
+    path: 'headroom-plugin-cli',
     prescription: 'gentle'
   },
   protectedFilePatterns: []

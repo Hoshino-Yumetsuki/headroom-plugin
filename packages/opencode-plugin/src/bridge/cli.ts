@@ -11,8 +11,8 @@ export async function findCli(configPath?: string): Promise<string | null> {
   }
 
   try {
-    await execFileAsync('headroom-cli', ['--version']);
-    return 'headroom-cli';
+      await execFileAsync('headroom-plugin-cli', ['--version']);
+      return 'headroom-plugin-cli';
   } catch {
     // ignore
   }

@@ -7,5 +7,5 @@
   "endOfLine": "lf",
   "trailingComma": "none",
   "sortPackageJson": false,
-  "ignorePatterns": ["packages/headroom-cli"]
+  "ignorePatterns": ["packages/headroom-plugin-cli"]
 }
