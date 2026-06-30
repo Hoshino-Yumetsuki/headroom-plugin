@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "headroom-cli"
+version = "0.1.0"
+description = "Context pruning CLI for OpenCode sessions"
+requires-python = ">=3.10"
+license = "MIT"
+
+[project.scripts]
+headroom-cli = "headroom_cli.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

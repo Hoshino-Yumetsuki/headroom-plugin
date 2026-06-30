@@ -1,0 +1,37 @@
+{
+  "name": "opencode-headroom",
+  "version": "0.1.0",
+  "description": "Real-time context pruning plugin for OpenCode — powered by headroom",
+  "type": "module",
+  "main": "lib/index.mjs",
+  "types": "lib/index.d.ts",
+  "exports": {
+    "./server": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib"
+  ],
+  "scripts": {
+    "build": "rimraf lib && rolldown -c rolldown.config.ts",
+    "lint": "oxlint",
+    "lint-fix": "oxlint --fix && oxfmt"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": ">=1.4.3"
+  },
+  "devDependencies": {
+    "@opencode-ai/plugin": "^1.17.11",
+    "@opencode-ai/sdk": "^1.4.3",
+    "@types/node": "^22.0.0",
+    "oxfmt": "^0.56.0",
+    "oxlint": "^1.71.0",
+    "rimraf": "^6.1.3",
+    "rolldown": "^1.1.3",
+    "rolldown-plugin-dts": "^0.26.0",
+    "typescript": "^6.0.3"
+  }
+}
