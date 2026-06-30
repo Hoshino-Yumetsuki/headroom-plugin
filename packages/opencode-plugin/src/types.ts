@@ -27,6 +27,11 @@ export interface HeadroomConfig {
     prescription: 'gentle' | 'standard' | 'aggressive';
   };
   protectedFilePatterns: readonly string[];
+  log: {
+    debug: boolean;
+    info: boolean;
+    path: string;
+  };
 }
 
 export interface SessionState {

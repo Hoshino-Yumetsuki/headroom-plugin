@@ -25,7 +25,12 @@ const DEFAULT_CONFIG: HeadroomConfig = {
     path: 'headroom-plugin-cli',
     prescription: 'gentle'
   },
-  protectedFilePatterns: []
+  protectedFilePatterns: [],
+  log: {
+    debug: false,
+    info: true,
+    path: join(homedir(), '.config', 'opencode', 'logs', 'headroom')
+  }
 };
 
 function stripJsoncComments(content: string): string {
@@ -137,7 +142,12 @@ function mergeConfig(base: HeadroomConfig, override: Partial<HeadroomConfig>): H
       path: override.cli?.path ?? base.cli.path,
       prescription: override.cli?.prescription ?? base.cli.prescription
     },
-    protectedFilePatterns: override.protectedFilePatterns ?? base.protectedFilePatterns
+    protectedFilePatterns: override.protectedFilePatterns ?? base.protectedFilePatterns,
+    log: {
+      debug: override.log?.debug ?? base.log.debug,
+      info: override.log?.info ?? base.log.info,
+      path: override.log?.path ?? base.log.path
+    }
   };
 }
 

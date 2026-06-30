@@ -17,7 +17,7 @@ const server: Plugin = async (ctx) => {
   }
 
   const state = createSessionState();
-  const logger = createLogger();
+  const logger = createLogger(config);
 
   logger.info('Headroom plugin initialized');
 

@@ -25,7 +25,7 @@ export function injectMessageIdTags(
     const firstTextPart = msg.parts[firstTextPartIndex];
     if (firstTextPart?.type !== 'text') continue;
 
-    const tag = `<headroom-id>${shortId}</headroom-id>\n\n`;
+    const tag = `<!-- headroom-id: ${shortId} -->\n\n`;
     firstTextPart.text = tag + firstTextPart.text;
   }
 }
@@ -37,7 +37,7 @@ export function stripModelGeneratedMetadata(messages: MessageWithParts[]): void 
     for (const part of msg.parts) {
       if (part.type !== 'text') continue;
 
-      part.text = part.text.replace(/<headroom-id>.*?<\/headroom-id>\s*/g, '');
+      part.text = part.text.replace(/<!-- headroom-id: .*? -->\s*/g, '');
     }
   }
 }
