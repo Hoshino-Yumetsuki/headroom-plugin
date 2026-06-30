@@ -41,6 +41,8 @@ export interface SessionState {
   nudgeAnchor: number;
   toolCache: Map<string, ToolCacheEntry>;
   pendingManualCompress: boolean;
+  totalBytesSaved: number;
+  lastToastMilestone: number;
 }
 
 export interface CompressionBlock {

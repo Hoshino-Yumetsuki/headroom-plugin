@@ -31,8 +31,10 @@ def format_bytes(n: int) -> str:
     return f"{n / (1024 * 1024):.1f} MB"
 
 
-def format_timestamp(ts: int) -> str:
+def format_timestamp(ts: int | float) -> str:
     """Format a Unix timestamp as ISO-8601 local time."""
+    if ts > 20000000000:
+        ts = ts / 1000.0
     dt = datetime.fromtimestamp(ts, tz=timezone.utc).astimezone()
     return dt.strftime("%Y-%m-%d %H:%M:%S")
 

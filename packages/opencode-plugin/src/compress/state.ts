@@ -12,7 +12,9 @@ export function createSessionState(): SessionState {
     lastUserMessageTurn: 0,
     nudgeAnchor: 0,
     toolCache: new Map(),
-    pendingManualCompress: false
+    pendingManualCompress: false,
+    totalBytesSaved: 0,
+    lastToastMilestone: 0
   };
 }
 
@@ -28,4 +30,6 @@ export function resetSessionState(state: SessionState): void {
   state.nudgeAnchor = 0;
   state.toolCache.clear();
   state.pendingManualCompress = false;
+  state.totalBytesSaved = 0;
+  state.lastToastMilestone = 0;
 }

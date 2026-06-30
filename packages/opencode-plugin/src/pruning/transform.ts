@@ -98,6 +98,18 @@ export function createMessageTransformPipeline(
     state.messageIdMap = idMap;
     state.shortIdMap = new Map(Array.from(idMap.entries()).map(([k, v]) => [v, k]));
 
+    let bytesSavedThisTurn = 0;
+
+    // Store original sizes for calculation
+    const originalSizes = new Map<string, number>();
+    for (const msg of output.messages) {
+      for (const part of msg.parts) {
+        if (part.id && part.type === 'tool' && part.state?.input) {
+          originalSizes.set(part.id, JSON.stringify(part.state.input).length);
+        }
+      }
+    }
+
     const strategies = getAllStrategies();
     for (const [_name, strategy] of strategies) {
       await strategy(output.messages, state, config, logger);
@@ -106,6 +118,30 @@ export function createMessageTransformPipeline(
     applyCompressionBlocks(output.messages, state, logger);
 
     pruneParts(output.messages, state, logger);
+
+    // Calculate bytes saved by parts pruned or modified
+    for (const msg of output.messages) {
+      for (const part of msg.parts) {
+        if (part.id && originalSizes.has(part.id)) {
+          if (part.type === 'tool' && part.state?.input) {
+            const newSize = JSON.stringify(part.state.input).length;
+            const oldSize = originalSizes.get(part.id)!;
+            if (newSize < oldSize) {
+              bytesSavedThisTurn += oldSize - newSize;
+            }
+          }
+        }
+      }
+    }
+
+    // Add sizes of completely pruned parts
+    for (const partId of state.prunedPartIds) {
+      if (originalSizes.has(partId)) {
+        bytesSavedThisTurn += originalSizes.get(partId)!;
+      }
+    }
+
+    state.totalBytesSaved += bytesSavedThisTurn;
 
     const priorityMap = buildPriorityMap(output.messages, config);
 

@@ -1,4 +1,5 @@
 """OpenCode SQLite session reader."""
+
 from __future__ import annotations
 
 import json
@@ -29,8 +30,39 @@ def get_db_path() -> Path:
     elif system == "Darwin":
         base = Path.home() / "Library" / "Application Support"
     elif system == "Windows":
+        # Search common locations on Windows
+        candidates: list[Path] = []
+
+        # 1. ~/.config/opencode/opencode.db
+        candidates.append(Path.home() / ".config" / "opencode" / "opencode.db")
+
+        # 2. ~/.local/share/opencode/opencode.db
+        candidates.append(Path.home() / ".local" / "share" / "opencode" / "opencode.db")
+
+        # 3. %LOCALAPPDATA%/opencode/opencode.db
         local_app = os.environ.get("LOCALAPPDATA")
-        base = Path(local_app) if local_app else Path.home() / "AppData" / "Local"
+        if local_app:
+            candidates.append(Path(local_app) / "opencode" / "opencode.db")
+
+        # 4. %APPDATA%/opencode/opencode.db
+        app_data = os.environ.get("APPDATA")
+        if app_data:
+            candidates.append(Path(app_data) / "opencode" / "opencode.db")
+
+        # 5. Fallback if env vars missing
+        if not local_app and not app_data:
+            candidates.append(
+                Path.home() / "AppData" / "Local" / "opencode" / "opencode.db"
+            )
+
+        for path in candidates:
+            if path.is_file():
+                return path
+
+        # If none exist, list them in the error
+        candidate_paths = "\n  ".join(str(p) for p in candidates)
+        msg = f"OpenCode database not found. Looked in:\n  {candidate_paths}"
+        raise FileNotFoundError(msg)
     else:
         base = Path.home() / ".local" / "share"
 

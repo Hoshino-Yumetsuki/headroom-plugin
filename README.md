@@ -33,29 +33,37 @@ headroom-plugin-cli formulary               # Show all strategies
 ### Installation Guide
 
 #### Installing the Python CLI (`headroom-plugin-cli`)
+
 To install the Python package directly from a git repository URL (e.g., GitHub), you can use `pip` or `uv`. The format is `package_name@git+url`.
 
 Using `uv` (recommended):
+
 ```bash
 uv pip install headroom-plugin-cli@git+https://github.com/your-org/headroom-plugin.git#subdirectory=packages/headroom-plugin-cli
 ```
 
 Using standard `pip`:
+
 ```bash
 pip install headroom-plugin-cli@git+https://github.com/your-org/headroom-plugin.git#subdirectory=packages/headroom-plugin-cli
 ```
-*(Note: Because this is a monorepo, you must specify the `#subdirectory=` fragment to point to the Python package folder.)*
+
+_(Note: Because this is a monorepo, you must specify the `#subdirectory=` fragment to point to the Python package folder.)_
 
 #### Installing the OpenCode Plugin (`opencode-plugin`)
+
 To install the OpenCode plugin (npm package) directly from a git repository URL:
 
 Using the OpenCode CLI:
+
 ```bash
 opencode plugin add git+https://github.com/your-org/headroom-plugin.git#workspace=opencode-headroom
 ```
-*(Note: Replace `your-org/headroom-plugin` with the actual repository URL. The `#workspace=` fragment is required for monorepos to specify which package to install from the repo).*
+
+_(Note: Replace `your-org/headroom-plugin` with the actual repository URL. The `#workspace=` fragment is required for monorepos to specify which package to install from the repo)._
 
 If you are developing locally:
+
 ```bash
 opencode plugin add ./packages/opencode-plugin
 ```

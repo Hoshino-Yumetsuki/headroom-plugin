@@ -8,6 +8,7 @@ function formatStatus(state: SessionState): string {
   lines.push(`Session: ${state.sessionId ?? 'none'}`);
   lines.push(`Turn: ${state.turnCount}`);
   lines.push(`Fetches: ${state.fetchCount}`);
+  lines.push(`Total Bytes Saved: ${state.totalBytesSaved.toLocaleString()} bytes`);
   lines.push('');
 
   if (state.compressionBlocks.length > 0) {
