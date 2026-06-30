@@ -669,9 +669,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@root/headroom-plugins@workspace:.":
+"@root/headroom-plugin@workspace:.":
   version: 0.0.0-use.local
-  resolution: "@root/headroom-plugins@workspace:."
+  resolution: "@root/headroom-plugin@workspace:."
   dependencies:
     oxfmt: "npm:^0.56.0"
     oxlint: "npm:^1.71.0"

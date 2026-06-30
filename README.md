@@ -1,4 +1,4 @@
-# Headroom Plugins
+# Headroom Plugin
 
 Real-time context pruning for OpenCode sessions — inspired by [cozempic](https://github.com/Ruya-AI/cozempic) and powered by headroom compression algorithms.
 

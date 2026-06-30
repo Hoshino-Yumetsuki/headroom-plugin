@@ -1,5 +1,5 @@
 {
-  "name": "@root/headroom-plugins",
+  "name": "@root/headroom-plugin",
   "private": true,
   "type": "module",
   "workspaces": [
