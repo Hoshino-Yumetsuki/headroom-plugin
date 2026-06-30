@@ -16,14 +16,6 @@ The OpenCode plugin implementation.
 
 ## Installation Guide
 
-### Installing the OpenCode Plugin
-
-Using the OpenCode CLI:
-
-```bash
-opencode plugin add @q78kg/opencode-headroom
-```
-
 ### Installing the Python CLI (`headroom-plugin-cli`)
 
 Using `uv` (recommended):
@@ -38,7 +30,17 @@ Using standard `pip`:
 pip install headroom-plugin-cli@git+https://github.com/Hoshino-Yumetsuki/headroom-plugin.git#subdirectory=packages/headroom-plugin-cli --upgrade
 ```
 
-## Configuration
+### Installing the OpenCode Plugin
+
+Using the OpenCode CLI:
+
+```bash
+opencode plugin add @q78kg/opencode-headroom
+```
+
+## Configuration (Optional)
+
+### OpenCode
 
 Global config at `~/.config/opencode/headroom.jsonc`:
 
