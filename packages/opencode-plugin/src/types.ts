@@ -36,7 +36,7 @@ export interface HeadroomConfig {
 
 export interface SessionState {
   sessionId: string | null;
-  requestId: string | null;  // UUID v4 for request lifecycle tracking
+  requestId: string | null; // UUID v4 for request lifecycle tracking
   compressionBlocks: CompressionBlock[];
   prunedPartIds: Set<string>;
   messageIdMap: Map<string, string>;

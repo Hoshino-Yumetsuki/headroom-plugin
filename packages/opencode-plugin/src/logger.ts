@@ -1,4 +1,4 @@
-import { mkdirSync, appendFileSync, existsSync, readdirSync, statSync, renameSync } from 'node:fs';
+import { mkdirSync, appendFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { exec } from 'node:child_process';
 import type { Logger, HeadroomConfig } from './types.ts';
@@ -25,7 +25,7 @@ export function createLogger(config: HeadroomConfig): Logger {
     const sign = tzOffset >= 0 ? '+' : '-';
     const pad = (n: number) => Math.floor(Math.abs(n)).toString().padStart(2, '0');
     const tzString = `${sign}${pad(tzOffset / 60)}:${pad(tzOffset % 60)}`;
-    
+
     const year = date.getFullYear();
     const month = pad(date.getMonth() + 1);
     const day = pad(date.getDate());
@@ -33,7 +33,7 @@ export function createLogger(config: HeadroomConfig): Logger {
     const minutes = pad(date.getMinutes());
     const seconds = pad(date.getSeconds());
     const ms = date.getMilliseconds().toString().padStart(3, '0');
-    
+
     return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${ms}${tzString}`;
   }
 
@@ -45,20 +45,20 @@ export function createLogger(config: HeadroomConfig): Logger {
 
     try {
       const files = readdirSync(logDir);
-      
+
       for (const file of files) {
         // Only compress .log files that are not today's log
         if (!file.endsWith('.log')) continue;
-        
+
         const filePath = join(logDir, file);
-        
+
         // Skip today's log file
         if (filePath === todayPath) continue;
 
         // Check if file is from a previous day
         const stats = statSync(filePath);
         const fileDate = new Date(stats.mtime);
-        
+
         if (
           fileDate.getDate() !== today.getDate() ||
           fileDate.getMonth() !== today.getMonth() ||
@@ -68,11 +68,14 @@ export function createLogger(config: HeadroomConfig): Logger {
           exec(`gzip "${filePath}"`, (err) => {
             if (err) {
               // Fallback for Windows if gzip is not available
-              exec(`powershell -Command "Compress-Archive -Path '${filePath}' -DestinationPath '${filePath}.zip' -Force; Remove-Item '${filePath}'"`, (err2) => {
-                if (err2) {
-                  // If both fail, leave uncompressed (silent failure)
+              exec(
+                `powershell -Command "Compress-Archive -Path '${filePath}' -DestinationPath '${filePath}.zip' -Force; Remove-Item '${filePath}'"`,
+                (err2) => {
+                  if (err2) {
+                    // If both fail, leave uncompressed (silent failure)
+                  }
                 }
-              });
+              );
             }
           });
         }
@@ -90,14 +93,14 @@ export function createLogger(config: HeadroomConfig): Logger {
       message: msg,
       ...(metadata && { metadata })
     };
-    
+
     const logPath = getLogFilePath(now);
-    
+
     // Compress old logs on first write of the day
     if (!existsSync(logPath)) {
       compressOldLogs();
     }
-    
+
     appendFileSync(logPath, JSON.stringify(logEntry) + '\n', 'utf-8');
   }
 
