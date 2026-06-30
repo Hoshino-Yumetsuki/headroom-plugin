@@ -59,6 +59,11 @@ PRESCRIPTIONS: dict[str, list[str]] = {
 }
 
 
+def get_prescription_strategies(prescription: str) -> list[str]:
+    """Get list of strategy names for a prescription tier."""
+    return PRESCRIPTIONS.get(prescription, PRESCRIPTIONS["gentle"])
+
+
 StrategyFunc = Callable[
     [list["MessageInfo"], list["PartInfo"], "Config"],
     "StrategyResult",
