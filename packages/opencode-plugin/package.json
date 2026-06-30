@@ -17,6 +17,7 @@
   ],
   "scripts": {
     "build": "rimraf lib && rolldown -c rolldown.config.ts",
+    "prepare": "node --run build",
     "lint": "oxlint",
     "lint-fix": "oxlint --fix && oxfmt"
   },

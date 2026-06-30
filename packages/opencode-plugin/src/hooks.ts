@@ -1,7 +1,6 @@
 import type { HeadroomConfig, SessionState, Logger } from './types.ts';
 import { createSystemPromptHandler } from './nudge/system.ts';
 import { createMessageTransformPipeline } from './pruning/transform.ts';
-import { createCommandHandler } from './commands/handler.ts';
 
 export function createSystemPromptHook(config: HeadroomConfig, state: SessionState) {
   return createSystemPromptHandler(config, state);
@@ -20,10 +19,6 @@ export function createTextCompleteHook(_state: SessionState) {
     // Text complete hook placeholder
     // Could be used for inline completion filtering in the future
   };
-}
-
-export function createCommandHook(config: HeadroomConfig, state: SessionState, logger: Logger) {
-  return createCommandHandler(config, state, logger);
 }
 
 export function createEventHook(state: SessionState, logger: Logger) {
