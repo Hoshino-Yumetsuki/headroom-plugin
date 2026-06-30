@@ -1,6 +1,6 @@
 import type { HeadroomConfig, SessionState, Logger } from './types.ts';
 import { createSystemPromptHandler } from './nudge/system.ts';
-import { createMessageTransformPipeline } from './pruning/transform.ts';
+import { createMessageTransformPipeline } from './pruning/transform-cli.ts';
 
 export function createSystemPromptHook(config: HeadroomConfig, state: SessionState) {
   return createSystemPromptHandler(config, state);

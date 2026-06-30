@@ -48,11 +48,37 @@ class StrategyInfo:
     func: object  # callable
 
 
-# --- OpenCode data shapes ---
+# --- Generic message format (client-agnostic) ---
 
 
 @dataclass
-class SessionInfo:
+class PartInfo:
+    """A message part (generic format)."""
+
+    id: str
+    type: str  # "text" | "tool_call" | "tool_result" | etc.
+    content: str | None = None
+    tool: str | None = None
+    input_data: dict[str, object] | None = None
+    output_data: str | None = None
+    size_bytes: int = 0
+
+
+@dataclass
+class MessageInfo:
+    """A message (generic format)."""
+
+    id: str
+    role: str  # "user" | "assistant" | "system"
+    timestamp: int
+    parts: list[PartInfo] = field(default_factory=list)
+
+
+# --- OpenCode-specific data shapes (for adapter) ---
+
+
+@dataclass
+class OpenCodeSessionInfo:
     """An OpenCode session record."""
 
     id: str
@@ -66,7 +92,7 @@ class SessionInfo:
 
 
 @dataclass
-class MessageInfo:
+class OpenCodeMessageInfo:
     """An OpenCode message record."""
 
     id: str
@@ -77,7 +103,7 @@ class MessageInfo:
 
 
 @dataclass
-class PartInfo:
+class OpenCodePartInfo:
     """An OpenCode message-part record."""
 
     id: str
