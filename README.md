@@ -10,7 +10,7 @@ This plugin follows the **transparency principle** of the headroom reverse proxy
 - **Internal tracking only**: Message IDs and compression metadata are tracked internally
 - **Non-invasive pruning**: Context cleanup happens transparently without modifying user or model messages
 - **JSON structured logging**: Machine-readable logs with local timezone timestamps
-- **External log rotation**: Date-based log files (YYYY-MM-DD.log) rely on external tools like logrotate
+- **Automatic log rotation**: Date-based log files (YYYY-MM-DD.log) with automatic gzip compression
 
 ## Architecture
 
